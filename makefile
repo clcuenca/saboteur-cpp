@@ -1,98 +1,182 @@
 COMPILER:=g++
-CPPFLAGS:=-Wall -Wextra -g -pedantic  -std=c++17 -pthread
+CPPFLAGS:=-Wall -Wextra -g -pedantic -std=c++17
 TARGET:=processjruntime
 TARGETTEST:=processjruntimetest
 
 # ----------
 # Extensions
 
-ALLHPPCONST:=*.hpp
-ALLCPPCONST:=*.cpp
+HPPCONST:=.hpp
+CPPCONST:=.cpp
+OBJCONST:=.o
+GCHCONST:=.gch
+
+ALLHPPCONST:=*$(HPPCONST)
+ALLCPPCONST:=*$(CPPCONST)
+ALLOBJCONST:=*$(OBJCONST)
+ALLGCHCONST:=*$(PCHCONST)
 
 # -----------
 # Directories
 
-BIN:=bin
-INCLUDE:=include
-SOURCE:=src
-TEST:=test
+BIN_DIR:=bin
+INCLUDE_DIR:=include
+OBJ_DIR:=obj
+SOURCE_DIR:=src
+TEST_DIR:=test
+THREAD_DIR:=thread
+INTERFACES_DIR:=interfaces
 
 # -----
-# Paths
+# Names
 
-INCLUDEPATH:=-I$(INCLUDE)/
-SOURCEPATH:=$(SOURCE)/
+TYPES:=Types
+THREADOBSERVER:=ThreadObserver
+THREAD:=Thread
+THREADATTRIBUTE:=ThreadAttribute
+NAMESPACE:=ProcessJ
+
+# ----------
+# Root Paths
+
+INCLUDEPATH:=-I$(INCLUDE_DIR)/
+SOURCEPATH:=$(SOURCE_DIR)/
 
 # -------------
 # Include Paths
 
-TESTINCLUDEPATH:=$(INCLUDEPATH)$(TEST)/
-RUNTIMEINCLUDEPATH:=$(INCLUDEPATH)
+INTERFACESINCLUDEPATH:=$(INCLUDEPATH)$(INTERFACES_DIR)/
+THREADINCLUDEPATH:=$(INCLUDEPATH)$(THREAD_DIR)/
+
+# ----------
+# File Paths
+
+TYPESPATH:=$(INCLUDE_DIR)/$(TYPES)$(HPPCONST)
+THREADOBSERVERPATH:=$(INCLUDE_DIR)/$(INTERFACES_DIR)/$(THREADOBSERVER)$(HPPCONST)
+THREADPATH:=$(INCLUDE_DIR)/$(THREAD_DIR)/$(THREAD)$(HPPCONST)
+THREADATTRIBUTEPATH:=$(INCLUDE_DIR)/$(THREAD_DIR)/$(THREADATTRIBUTE)$(HPPCONST)
+NAMESPACEPATH:=$(INCLUDE_DIR)/$(NAMESPACE)$(HPPCONST)
+
+# -------------------
+# Precompiled Headers
+
+TYPES_GCH:=$(TYPESPATH)$(GCHCONST)
+THREADOBSERVER_GCH:=$(THREADOBSERVERPATH)$(GCHCONST)
+THREAD_GCH:=$(THREADPATH)$(GCHCONST)
+THREADATTRIBUTE_GCH:=$(THREADATTRIBUTEPATH)$(GCHCONST)
+NAMESPACE_GCH:=$(NAMESPACEPATH)$(GCHCONST)
+
+# -------------------------------------
+# Header Precompilation Build Arguments
+
+TYPESBUILDARGS_GCH:=-c $(INCLUDEPATH) $(TYPESPATH) -o $(TYPES_GCH)
+THREADOBSERVERBUILDARGS_GCH:=-c $(THREADOBSERVERPATH) -o $(THREADOBSERVER_GCH)
+THREADBUILDARGS_GCH:=-c $(INCLUDEPATH) $(INTERFACESINCLUDEPATH) $(THREADINCLUDEPATH) $(THREADPATH) -o $(THREAD_GCH)
+THREADATTRIBUTEBUILDARGS_GCH:= -c $(TYPESPATH) -o $(THREADATTRIBUTE_GCH)
+NAMESPACEBUILDARGS_GCH:=-c $(INCLUDEPATH) $(INTERFACESINCLUDEPATH) $(THREADINCLUDEPATH) $(NAMESPACEPATH) -o $(NAMESPACE_GCH)
 
 # -----------
 # Source Path
 
+THREAD_SOURCEPATH:=$(SOURCE_DIR)/$(THREAD_DIR)/$(THREAD)$(CPPCONST)
+
+# -----------
+# Object Path
+
+THREAD_OBJ:=$(OBJ_DIR)/$(THREAD)$(OBJCONST)
+
+# -------------------------------------
+# Object Precompilation Build Arguments
+
+THREADBUILDARGS_OBJ:=-c $(THREADINCLUDEPATH) $(THREAD_SOURCEPATH) -o $(THREAD_OBJ)
+
+# -------------------
+# Dependency Includes
+
+DEPENDENCIES:=$(INCLUDEPATH) $(INTERFACESINCLUDEPATH) $(THREADINCLUDEPATH)
+
+# -------
+# Modules
+
+MODULES:=$(THREAD_OBJ)
+
 # -------
 # Targets
 
-$(BIN)/$(TARGET):
+$(BIN_DIR)/$(TARGET):
 	clear
-	@echo "🚧 Compiling"
-	$(COMPILER) $(CPPFLAGS) $(RUNTIMEINCLUDEPATH) -o $(BIN)/$(TARGET) $(RUNTIMESOURCEPATH)$(ALLCPPCONST)
+	@echo "Compiling..."
+	@echo "Precompiling Headers"
+	$(COMPILER) $(CPPFLAGS) $(TYPESBUILDARGS_GCH)
+	$(COMPILER) $(CPPFLAGS) $(THREADOBSERVERBUILDARGS_GCH)
+	$(COMPILER) $(CPPFLAGS) $(THREADATTRIBUTEBUILDARGS_GCH)
+	$(COMPILER) $(CPPFLAGS) $(THREADBUILDARGS_GCH)
+	$(COMPILER) $(CPPFLAGS) $(NAMESPACEBUILDARGS_GCH)
+	@echo "Precompiling Modules"
+	$(COMPILER) $(CPPFLAGS) $(THREADBUILDARGS_OBJ)
+	@echo "Compiling Main"
+	$(COMPILER) $(CPPFLAGS) $(DEPENDENCIES) -o $(BIN_DIR)/$(TARGET) $(SOURCEPATH)$(ALLCPPCONST) $(MODULES) -pthread -fPIE
+
+headers:
+	clear
+	@echo "Precompiling headers..."
+	$(COMPILER) $(CPPFLAGS) $(TYPESBUILDARGS_GCH)
+	$(COMPILER) $(CPPFLAGS) $(THREADOBSERVERBUILDARGS_GCH)
+	$(COMPILER) $(CPPFLAGS) $(THREADBUILDARGS_GCH)
+	$(COMPILER) $(CPPFLAGS) $(NAMESPACEBUILDARGS_GCH)
+
+objects:
+	clear
+	@echo "Compiling Modules..."
+	$(COMPILER) $(CPPFLAGS) $(THREADBUILDARGS_OBJ)
 
 run:
 	clear
-	@echo "🚀 Running..."
-	./$(BIN)/$(TARGET)
+	@echo "Running..."
+	./$(BIN_DIR)/$(TARGET)
 
 debug:
 	clear
-	@echo "🚫🐛 Debug Run..."
-	gdb ./$(BIN)/$(TARGET)
+	@echo "Debug Run..."
+	gdb ./$(BIN_DIR)/$(TARGET)
 
 valgrindrun:
 	clear
-	@echo "🚀 Running with valgrind..."
-	valgrind ./$(BIN)/$(TARGET)
+	@echo "Running with valgrind..."
+	valgrind ./$(BIN_DIR)/$(TARGET)
 
 test:
 	clear
-	@echo "🚧 Compiling"
-	$(COMPILER) $(CPPFLAGS) $(RUNTIMEINCLUDEPATH) $(TESTINCLUDEPATH) -o $(BIN)/$(TARGETTEST) $(RUNTIMESOURCEPATH)$(ALLCPPCONST) $(UTILITIESSOURCEPATH)$(ALLCPPCONST) $(TESTSOURCEPATH)$(ALLCPPCONST)
+	@echo "Compiling"
+	$(COMPILER) $(CPPFLAGS) $(RUNTIMEINCLUDEPATH) $(TESTINCLUDEPATH) -o $(BIN_DIR)/$(TARGETTEST) $(RUNTIMESOURCEPATH)$(ALLCPPCONST) $(UTILITIESSOURCEPATH)$(ALLCPPCONST) $(TESTSOURCEPATH)$(ALLCPPCONST)
 
 runtest:
 	clear
-	@echo "🚀 Running..."
-	./$(BIN)/$(TARGETTEST)
+	@echo "Running..."
+	./$(BIN_DIR)/$(TARGETTEST)
 
 testdebug:
 	clear
-	@echo "🚫🐛 Debug Run..."
-	gdb ./$(BIN)/$(TARGETTEST)
+	@echo "Debug Run..."
+	gdb ./$(BIN_DIR)/$(TARGETTEST)
 
 testvalgrindrun:
 	clear
-	@echo "🚀 Running with valgrind..."
-	valgrind ./$(BIN)/$(TARGETTEST)
+	@echo "Running with valgrind..."
+	valgrind ./$(BIN_DIR)/$(TARGETTEST)
 
 clean:
 	clear
-	@echo "🧹💩 Cleaning"
-ifeq (,$(wildcard $(BIN)/$(TARGET).dSYM))
-	rm -rf $(BIN)/$(TARGET).dSYM
+	@echo "Cleaning"
+ifeq (,$(wildcard $(BIN_DIR)/$(TARGET).dSYM))
+	rm -rf $(BIN_DIR)/$(TARGET).dSYM
 endif
-ifeq (,$(wildcard $(BIN)/$(TARGET).o))
-	rm -rf $(BIN)/$(TARGET)
-	rm -rf $(BIN)/$(TARGET).o
-endif
-
-cleantest:
-	clear
-	@echo "🧹💩 Cleaning"
-ifeq (,$(wildcard $(BIN)/$(TARGETTEST).dSYM))
-	rm -rf $(BIN)/$(TARGETTEST).dSYM
-endif
-ifeq (,$(wildcard $(BIN)/$(TARGETTEST).o))
-	rm -rf $(BIN)/$(TARGETTEST)
-	rm -rf $(BIN)/$(TARGETTEST).o
+ifeq (,$(wildcard $(BIN_DIR)/$(TARGET).o))
+	rm -rf $(BIN_DIR)/$(TARGET)
+	rm -rf $(BIN_DIR)/$(TARGET).o
+	rm -rf $(TYPES_GCH)
+	rm -rf $(THREADOBSERVER_GCH)
+	rm -rf $(THREAD_GCH)
+	rm -rf $(NAMESPACE_GCH)
+	rm -rf $(THREAD_OBJ)
 endif

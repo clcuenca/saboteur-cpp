@@ -13,26 +13,14 @@
 #ifndef PROCESSJ_RUNTIME_HPP
 #define PROCESSJ_RUNTIME_HPP
 
-/// --------
-/// Includes
-
-#include<cinttypes>
-#include<sched.h>
-
 namespace ProcessJ {
-
-    /// -------
-    /// Classes
-
-    class Thread;
-
 
 }
 
-/// --------------------
-/// Header Consolidation
-
 #pragma once
+#include<Types.hpp>
+#include<ThreadObserver.hpp>
+#include<ThreadAttribute.hpp>
 #include<Thread.hpp>
 
 #endif
