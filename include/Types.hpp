@@ -1,5 +1,5 @@
 /*!
- * \brief ProcessJ Runtime types declaration. Declares non-class and non-struct
+ * \brief Opal types declaration. Declares non-class and non-struct
  * types that are used throughout the runtime.
  *
  * \author Carlos L. Cuenca
@@ -7,8 +7,8 @@
  * \date 02/05/2022
  */
 
-#ifndef PROCESSJ_TYPES_HPP
-#define PROCESSJ_TYPES_HPP
+#ifndef OPAL_TYPES_HPP
+#define OPAL_TYPES_HPP
 
 /// --------
 /// Includes
@@ -17,7 +17,7 @@
 #include<exception>
 #include<mutex>
 
-namespace ProcessJ {
+namespace Opal {
 
     /// -----------------
     /// Macro Definitions
@@ -56,8 +56,14 @@ namespace ProcessJ {
      * \brief Tested with linux arm64
      */
 
-    /// !!!
-    #define GetProcessId syscall(SYS_gettid)
+    /// !!!//syscall(186) // x86-64 gettid is 186
+    #define GetProcessId(data)  \
+        __asm__ __volatile__( \
+                             "mov rax, 0x00ba  \n"     \
+                             "syscall       \n"     \
+                             "mov %[output], rax\n" \
+                             : [output] "=r" (data) :); \
+
 
     /// ----------------
     /// Type Definitions
@@ -95,14 +101,21 @@ namespace ProcessJ {
      * \brief Type definition for clone flags.
      */
 
-    typedef int32_t CloneFlags;
+    typedef uint64_t CloneFlags;
 
     /*!
      * \var typedef int64_t ThreadID;
      * \brief Type definition for a ThreadID
      */
 
-    typedef int64_t ThreadID;
+    typedef uint64_t ThreadID;
+
+    /*!
+     * \var typedef uint64_t State;
+     * \bried Type definition for a State
+     */
+
+    typedef uint64_t State;
 
     /*!
      * \var typedef bool Flag;

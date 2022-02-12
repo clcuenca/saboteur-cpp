@@ -1,47 +1,5 @@
 #include<iostream>
-#include<ProcessJ.hpp>
-
-/*!
- * \def Align attribute
- * \brief Declares the aligned attribute
- */
-
-//define Align(bytes) __attribute__ ((aligned(bytes)))
-
-// Place me in namespace; We use this as an in-place address to allocate the
-// ThreadRegistry
-//static Align(16) int8_t RegistryPlaceholder[sizeof(ThreadRegistry)];
-
-/*****
- * Based on gcc code
- */
-
-/*!
- * x86-64 Assembly. Performs a syscall with the given number.
- * \param call The number corresponding with the desired system call
- * \return The result of the system call
- */
-// internal_syscall; __sanitizer_common/sanitizer_syscall_linux_x86_64
-//static uint64_t syscall(uint64_t call) {
-
-  //  uint64_t result;
-
-    //asm volatile("syscall" : "=a"(result) : "a"(call) : "rcx", "r11", "memory", "cc");
-
-    //return result;
-
-//}
-
-
-//void someFunction() {
-
-  //  std::cout << "Hello World!" << std::endl;
-
-    //int index = 0;
-
-    //index++;
-
-//}
+#include<Opal.hpp>
 
 static void SomeOtherFunction(void) {
 
@@ -58,103 +16,125 @@ static void SomeFunction(void) {
 
   for(; index < 100; index++);
 
+  std::cout << "Finished counting" << std::endl;
+
 }
 
 
-class DummyObserver : public ProcessJ::ThreadObserver {
+class DummyObserver : public Opal::SaboteurObserver {
 
 public:
 
 
     /*!
-     * Invoked when the ProcessJ::Thread is created.
-     * \param thread The newly created ProcessJ::Thread
+     * Invoked when the Opal::Saboteur is created.
+     * \param thread The newly created Opal::Saboteur
      */
 
     void OnCreated(void* thread) {
 
-      std::cout << "OnCreated" << std::endl;
+      std::cout << "OnCreated: " << thread << std::endl;
 
     }
 
     /*!
-     * Invoked when the ProcessJ::Thread is in a waiting state.
-     * It is possible that ThreadObserver::OnStarted(void*) is
+     * Invoked when the Opal::Saboteur is in a waiting state.
+     * It is possible that SaboteurObserver::OnStarted(void*) is
      * called back immediately after (in the case that a return
-     * address was assigned to the ProcessJ::Thread).
-     * \param thread The waiting ProcessJ::Thread
+     * address was assigned to the Opal::Saboteur).
+     * \param thread The waiting Opal::Saboteur
      */
 
     void OnWaiting(void* thread) {
 
-      std::cout << "OnWaiting" << std::endl;
-
-    auto Function = reinterpret_cast<void*>(&SomeFunction);
-    auto OtherFunction = reinterpret_cast<void*>(&SomeOtherFunction);
-    std::cout << "SomeFunction Address: " << std::hex << Function << std::endl;
-    std::cout << "SomeOtherFunction Address: " << std::hex << OtherFunction << std::endl;
-    std::cout << "Setting Resume address to: " << Function << std::endl;
-    ((ProcessJ::Thread*) thread)->setResumeAddress(Function);
+        std::cout << "OnWaiting: " << thread << std::endl;
 
     }
 
     /*!
-     * Invoked when the ProcessJ::Thread has started execution
+     * Invoked when the Opal::Saboteur has started execution
      * but before it has executed any associated code
-     * \param thread The started ProcessJ::Thread
+     * \param thread The started Opal::Saboteur
      */
 
     void OnStarted(void* thread) {
 
+        std::cout << "OnStarted: " << thread << std::endl;
+
 
     }
 
     /*!
-     * Invoked when the ProcessJ::Thread has successfully been suspended.
-     * \param thread The suspended ProcessJ::Thread.
+     * Invoked when the Opal::Saboteur has successfully been suspended.
+     * \param thread The suspended Opal::Saboteur.
      */
 
     void OnSuspended(void* thread) {
 
-      std::cout << "OnSuspended" << std::endl;
+      std::cout << "OnSuspended: " << thread << std::endl;
 
     }
 
     /*!
-     * Invoked when the ProcessJ::Thread has been restarted from
+     * Invoked when the Opal::Saboteur has been restarted from
      * a suspended state.
-     * \param thread The restarted ProcessJ::Thread
+     * \param thread The restarted Opal::Saboteur
      */
 
-    void OnRestart(void* thread) {
+    void OnResume(void* thread) {
 
-      std::cout << "OnRestart" << std::endl;
+      std::cout << "OnResume: " << thread << std::endl;
 
     }
 
     /*!
-     * Invoked when the ProcessJ::Thread has finished.
-     * \param thread The ProcessJ::Thread that has finished.
+     * Invoked when the Opal::Saboteur has finished.
+     * \param thread The Opal::Saboteur that has finished.
      */
 
     void OnFinished(void* thread) {
 
-      std::cout << "OnFinished" << std::endl;
+      std::cout << "OnFinished: " << thread << std::endl;
 
     }
-
 
 };
 
 int main() {
 
+    // Create an observer.
     DummyObserver observer;
-    ProcessJ::Thread thread((ProcessJ::ThreadObserver*)(&observer));
 
-    // Yield every time we're here
-    while(!thread.shouldTerminate()) Yield;
+    uint64_t* array = new uint64_t[64];
 
+    std::cout << "test: " << array << std::endl;
+
+    // Create the thread.
+    Opal::Saboteur thread((Opal::SaboteurObserver*)(&observer));
+
+    bool pushed = false;
+
+    while(!thread.isWaiting()) Yield;
+
+    // We wait until the thread has completed.
+    while(true) {
+
+      if(!pushed) {
+
+        auto Function = reinterpret_cast<void*>(SomeFunction);
+        auto OtherFunction = reinterpret_cast<void*>(&SomeOtherFunction);
+
+        std::cout << "Setting execution address to: " << Function << std::endl;
+
+        thread.push(Function, true);
+
+        pushed = true;
+
+      } else Yield;
+
+    }
+
+    // Finally, return
     return 0;
-
 
 }
